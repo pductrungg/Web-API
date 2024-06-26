@@ -1,0 +1,76 @@
+trigger:
+  branches:
+    include:
+      - refs/heads/master
+
+  paths:
+    include:
+      - src/Dpoint.BackEnd.Checkin/*
+      - devops/kubernetes/*
+
+name: $(Date:yyyyMMdd).$(Rev:rr)-$(SourceBranchName)
+
+resources:
+  repositories:
+    - repository: azdo-pipeline-templates
+      type: git
+      name: DPoint/azdo-pipeline-templates
+      ref: refs/heads/master
+
+parameters:
+  - name: forcePublish
+    type: boolean
+    default: false
+
+variables:
+  - name: allowPublish
+    value: $[ or(and(ne(variables['Build.Reason'], 'PullRequest'), or(startsWith(variables['Build.SourceBranch'], 'refs/heads/releases/'), eq(variables['Build.SourceBranch'], 'refs/heads/master'))), ${{parameters.forcePublish}}) ]
+
+  - name: project
+    value: "Dpoint.BackEnd.Checkin"
+
+  - name: k8sConnectionNonProd01
+    value: "azure-pipelines-cicd-development"
+
+  - name: containerRegistry
+    value: "gcr-dgvdigital-prod"
+
+  - name: googleProjectIdProduction
+    value: "dpoint-production"
+
+stages:
+  - template: pipeline-templates/build/dotnet-build-stage.yaml@azdo-pipeline-templates
+    parameters:
+      stageName: "ci"
+      projectPath: "src/$(project)/$(project).Api/$(project).Api.csproj"
+      workingDirectory: "src/$(project)/$(project).Api/"
+      displayName: "CI"
+      netCoreVersion: "6.x"
+
+  - template: pipeline-templates/build/docker-build-stage.yaml@azdo-pipeline-templates
+    parameters:
+      allowDeploy: variables.allowPublish
+      stageName: "prepare_image"
+      dependsOn: "ci"
+      displayName: "Prepare Image"
+      dockerfile: "$(Build.SourcesDirectory)/src/$(project)/$(project).Api/Dockerfile"
+      buildContext: "$(Build.SourcesDirectory)/src/$(project)/"
+      repository: "$(googleProjectIdProduction)/dpoint-checkin-api"
+      sourceFolder: "devops/kubernetes"
+      artifactName: "$(project)-artifact"
+      pushTag: "$(Build.BuildNumber)"
+      containerRegistry: $(containerRegistry)
+
+  - template: pipeline-templates/deploy/deploy-k8s.yaml@azdo-pipeline-templates
+    parameters:
+      allowDeploy: variables.allowPublish
+      stageName: "development"
+      environment: "development"
+      dependsOn: "prepare_image"
+      displayName: "DEV"
+      artifactName: "$(project)-artifact"
+      namespace: "api"
+      kubernetesServiceConnection: $(k8sConnectionNonProd01)
+      appType: "webapi"
+      imageTag: "gcr.io/$(googleProjectIdProduction)/dpoint-checkin-api:$(Build.BuildNumber)"
+      dotnetEnvironment: "Production"
