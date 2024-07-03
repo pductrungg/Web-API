@@ -50,6 +50,7 @@ namespace Dpoint.BackEnd.Checkin.Services
             services.AddTransient<IUserCheckinService, UserCheckinService>();
             services.AddTransient<IIdentityService, IdentityService>();
             services.AddTransient<ILeaveOfAbsenceService, LeaveOfAbsenceService>();
+            // services.AddTransient<IPostOutOfOffice, CustomerMeetForm>();
             #endregion Services
 
             var mapperConfig = new MapperConfiguration(mc =>

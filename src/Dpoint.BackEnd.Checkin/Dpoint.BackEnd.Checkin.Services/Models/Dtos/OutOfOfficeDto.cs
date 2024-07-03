@@ -12,5 +12,11 @@ namespace Dpoint.BackEnd.Checkin.Services.Models.Dtos
         public double TotalHour { get; set; }
         public string Reason { get; set; }
         public string Note { get; set; }
+        public string AmisEmployeeCode { get; set; }
+        public string AmisEmail { get; set; }
+        public string AmisDeptCode { get; set; }
+        public string UserEmployeeCode { get; set; }
+        public string UserEmail { get; set; }
+
     }
 }

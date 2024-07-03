@@ -353,9 +353,9 @@ namespace Dpoint.BackEnd.Checkin.Services.Services
                 return result.BuildError($"Can not convert {nameof(request.Date)}");
             }
             var userInfos = await _context.UserInfos.FirstOrDefaultAsync(x => x.UserEnrollNumber.Equals(request.UserId));
-            if (userInfos == null) return result.BuildError(MessageResponseConstant.ERROR_DATA_USER_NOT_FOUND);
+            // if (userInfos == null) return result.BuildError(MessageResponseConstant.ERROR_DATA_USER_NOT_FOUND);
 
-            var newOutOfOffice = new OutOfOffice
+            var newOutOfOffice = new OutOfOfficeDto
             {
                 From = FromDate,
                 To = ToDate,
@@ -365,10 +365,115 @@ namespace Dpoint.BackEnd.Checkin.Services.Services
                 UserId = userInfos.UserEnrollNumber,
             };
 
-            await _context.OutOfOffices.AddAsync(newOutOfOffice);
-            await _context.SaveChangesAsync();
+            // return BuildMultilingualResult(result, MessageResponseConstant.SUCCESSFULLY, MessageResponseConstant.SUCCESSFULLY);
 
-            return BuildMultilingualResult(result, MessageResponseConstant.SUCCESSFULLY, MessageResponseConstant.SUCCESSFULLY);
+            try{
+                var userInfor = await _context.UserInfos.Where(x => x.UserEnrollNumber.Equals(request.UserId)).FirstOrDefaultAsync();
+                if(userInfor != null){
+                    newOutOfOffice.UserId = userInfos.UserIDD;
+                }else{
+                    throw new Exception(MessageResponseConstant.ERROR_DATA_USER_NOT_FOUND);
+                }
+
+                var amisDepartment = await _context.AmisDepartments.Where(x => x.InternalDeptId == request.DeptId).FirstOrDefaultAsync();
+                if(amisDepartment != null){
+                    newOutOfOffice.AmisDeptCode = amisDepartment.AmisDeptCode;
+                }else{
+                    throw new Exception(MessageResponseConstant.ERROR_DATA_DEPARTMENT_NOT_FOUND);
+                }
+
+                var amisEmployee = await _context.AmisEmployees.FirstOrDefaultAsync(x => !x.IsDeleted && x.UserEmail == request.Email);
+                if(amisEmployee != null){
+                    if(amisEmployee.IsAmisUser){
+                        newOutOfOffice.AmisEmail =  amisEmployee.AmisEmail;
+                        newOutOfOffice.AmisEmployeeCode = amisEmployee.AmisEmployeeCode;
+                    }else{
+                        newOutOfOffice.AmisEmail = amisDepartment.AmisDeptEmail;
+                        newOutOfOffice.AmisEmployeeCode = amisDepartment.AmisDeptEmployeeCode;
+                    }
+                    newOutOfOffice.UserEmployeeCode = amisEmployee.AmisEmployeeCode;
+                }else{
+                    throw new Exception(MessageResponseConstant.ERROR_INVALID_AMIS_USER_DATA);
+                }
+            }catch(Exception ex){
+                return BuildMultilingualError(result, MessageResponseConstant.ERROR_LEAVE_REGISTRATION_FAILED, ex);
+            }
+
+            var dataPosted = new{
+                ProcessID = CF_Constant.CF_PROCESS_ID,
+                CreatorEmpCode = newOutOfOffice.AmisEmployeeCode,
+                CreatorEmail = newOutOfOffice.AmisEmail,
+                Data = new ArrayList(){
+                    new{
+                        // Input
+                        InputCode = AmisProcessConstant.LQ_DEPARTMENT_CODE,
+                        InputValue = new ArrayList(){
+                            new {
+                                OrganizationUnitCode = newOutOfOffice.AmisDeptCode
+                            }
+                        }
+                    },
+                    new{
+                        InputCode = CF_Constant.CF_FROM,
+                        InputValue = new ArrayList(){
+                            new{
+                                Value = newOutOfOffice.From
+                            }
+                        }
+                    },
+                    new{
+                        InputCode = CF_Constant.CF_TO,
+                        InputValue = new ArrayList(){
+                            new{
+                                Value = newOutOfOffice.To
+                            }
+                        } 
+                    },
+                    new{
+                        InputCode = CF_Constant.CF_NOTE,
+                        InputValue = new ArrayList(){
+                            new{
+                                Value = newOutOfOffice.TotalHour
+                            }
+                        }
+                    },
+                    new{
+                        InputCode = CF_Constant.CF_REASON,
+                        InputValue = new ArrayList(){
+                            new{
+                                Value = newOutOfOffice.Reason
+                            }
+                        }
+                    },
+                    new{
+                        InputCode = CF_Constant.CF_TOTAL_HOUR,
+                        InputValue = new ArrayList(){
+                            new{
+                                Value = newOutOfOffice.TotalHour
+                            }
+                        }
+                    },
+                    new{
+                        InputCode = AmisProcessConstant.LQ_EMPLOYEE_NAME_CODE,
+                        InputValue = new ArrayList(){
+                            new{
+                                EmployeeCode = newOutOfOffice.UserEmployeeCode,
+                                mail = newOutOfOffice.UserEmail
+                            }
+                        }
+                    }
+                }
+            };
+            // var contentPost  = JsonSerializer.Serialize()
+            HttpClient client = new HttpClient();
+
+            try{
+                // var rep = await .
+            }catch{
+
+            }
+            return BuildMultilingualResult(result,MessageResponseConstant.SUCCESSFULLY_REGISTERED_LEAVE , MessageResponseConstant.SUCCESSFULLY_REGISTERED_LEAVE);
+
 
         }
 

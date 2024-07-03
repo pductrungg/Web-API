@@ -13,4 +13,14 @@
         public const string LQ_NOTE_CODE = "f03e190c-5b2e-46f4-b9b7-76101e08ee6f";
         public const string LQ_LEAVE_REASON_CODE = "c3bcbc26-fe2f-488b-8c2a-c84eaa6c1090";
     }
+
+    public static class CF_Constant{
+        public const string CF_PROCESS_ID = "1234";
+        public const string CF_DEPARTMENT_CODE = "5678";
+        public const string CF_FROM="78910";
+        public const string CF_TO = "111213";
+        public const string CF_NOTE = "141516";
+        public const string CF_REASON = "171819";
+        public const string CF_TOTAL_HOUR="202122";
+    }
 }
