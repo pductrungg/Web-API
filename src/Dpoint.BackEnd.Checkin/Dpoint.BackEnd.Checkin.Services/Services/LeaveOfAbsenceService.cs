@@ -464,8 +464,27 @@ namespace Dpoint.BackEnd.Checkin.Services.Services
                     }
                 }
             };
-            // var contentPost  = JsonSerializer.Serialize()
+
+            string ContentType = _appSettingsAccessor.AmisProcessSettings.ContentType;
+            string XClientid = _appSettingsAccessor.AmisProcessSettings.XClientid;
+            string TenantID = _appSettingsAccessor.AmisProcessSettings.TenantID;
+
+            var contentPost  = JsonSerializer.Serialize(dataPosted);
+
             HttpClient client = new HttpClient();
+
+            var AmisProcessAPIUrl = _appSettingsAccessor.AmisProcessSettings.AmisProcessUrl + _appSettingsAccessor.AmisProcessSettings.AmisProcessEndPoint;
+            var httpRequestMessage = new HttpRequestMessage(){
+                RequestUri = new Uri(AmisProcessAPIUrl),
+                Method = HttpMethod.Post,
+                Headers = {
+                    {"x-clientID",XClientid},
+                    {"TenantId",TenantID}
+                },
+                Content = new StringContent(contentPost, Encoding.UTF8)
+            };
+            httpRequestMessage.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            httpRequestMessage.Content.Headers.ContentType = new MediaTypeHeaderValue(ContentType);
 
             try{
                 // var rep = await .
