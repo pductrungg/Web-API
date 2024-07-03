@@ -18,6 +18,9 @@ namespace Dpoint.BackEnd.Checkin.Api.Controllers
             _leaveOfAbsenceService = leaveOfAbsenceService;
         }
 
+        // private readonly ILeaveOffice _CustomerLeaveForm;
+        // public LeaveOfAbsenceController
+
         [HttpPost("post-leave-of-absence-request")]
         public async Task<IActionResult> PostUserLeaveOfAbsenceAsync([FromBody] UserLeaveRequest request)
         {
