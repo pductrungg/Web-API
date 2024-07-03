@@ -344,6 +344,7 @@ namespace Dpoint.BackEnd.Checkin.Services.Services
             var result = new AppActionResultData<string>();
             var strFrom = request.Date + " " + request.From;
             var strTo = request.Date + " " + request.To;
+            string process_execution_id = "";
             if (!strFrom.TryParseDateTime(out DateTime FromDate, DateTimeHelper.DEFAULT_DATETIME_WITHOUT_SECOND_FORMAT))
             {
                 return result.BuildError($"Can not convert {nameof(request.Date)}");
@@ -487,7 +488,18 @@ namespace Dpoint.BackEnd.Checkin.Services.Services
             httpRequestMessage.Content.Headers.ContentType = new MediaTypeHeaderValue(ContentType);
 
             try{
-                // var rep = await .
+                var rep = await client.SendAsync(httpRequestMessage);
+                if(rep.IsSuccessStatusCode){
+                    var newOutOfOfficeResponse = rep.Content.ReadAsAsync<Out_off_office_response>().Result;
+                    if(newOutOfOfficeResponse != null){
+                        if(newOutOfOfficeResponse.Success){
+                            var dataProcessExecution = newOutOfOfficeResponse.Data?.FirstOrDefault()?.Data?.ProcessExe?.process_execution_id;
+                            if(dataProcessExecution!=null){
+                                process_execution_id = dataProcessExecution;
+                            }
+                        }
+                    }
+                }
             }catch{
 
             }

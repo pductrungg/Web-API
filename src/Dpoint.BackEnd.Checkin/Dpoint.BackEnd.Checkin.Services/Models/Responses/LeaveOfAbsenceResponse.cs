@@ -1,4 +1,6 @@
-﻿namespace Dpoint.BackEnd.Checkin.Services.Models.Responses
+﻿using Microsoft.AspNetCore.SignalR;
+
+namespace Dpoint.BackEnd.Checkin.Services.Models.Responses
 {
     public class LeaveOfAbsenceResponse
     {
@@ -23,5 +25,25 @@
     public class LQDataProcessExecution
     {
         public string ProcessExecutionID { get; set; }
+    }
+
+    //Post OUT OF OFFICE
+    public class Out_off_office_response{
+        public IList<CF_ResponseData> Data {get;set;}
+        public bool Success { get; set; }
+
+    }
+
+    public class CF_ResponseData{
+        public bool Successful {get;set;}
+        public CF_execution Data{get;set;}
+    }
+
+    public class CF_reponse_data_detail{
+        public CF_execution ProcessExe{get;set;}
+    }
+
+    public class CF_execution{
+        public string process_execution_id{get;set;}
     }
 }
