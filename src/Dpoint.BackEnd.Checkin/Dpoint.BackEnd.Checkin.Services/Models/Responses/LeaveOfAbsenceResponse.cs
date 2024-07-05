@@ -29,14 +29,17 @@ namespace Dpoint.BackEnd.Checkin.Services.Models.Responses
 
     //Post OUT OF OFFICE
     public class Out_off_office_response{
-        public IList<CF_ResponseData> Data {get;set;}
         public bool Success { get; set; }
+        public int Code { get; set; }
+        public string UserMessage { get; set; }
+        public string SystemMessage { get; set; }
+        public IList<CF_ResponseData> Data {get;set;}
 
     }
 
     public class CF_ResponseData{
         public bool Successful {get;set;}
-        public CF_execution Data{get;set;}
+        public CF_reponse_data_detail Data{get;set;}
     }
 
     public class CF_reponse_data_detail{

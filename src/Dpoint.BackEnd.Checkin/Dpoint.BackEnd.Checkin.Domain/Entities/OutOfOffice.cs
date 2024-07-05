@@ -11,5 +11,7 @@ namespace Dpoint.BackEnd.Checkin.Domain.Entities
         public double TotalHour { get; set; }
         public string Reason { get; set; }
         public string Note { get; set; }
+        // public OutOfficeSta Status { get; set; }
+        // public IEnumerable<OutOfOfficeDetail> OutOfficeDetails { get; set; }
     }
 }

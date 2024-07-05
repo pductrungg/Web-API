@@ -62,6 +62,7 @@ namespace Dpoint.BackEnd.Checkin.Services.Services
             try
             {
                 var userInfos = await _context.UserInfos.Where(x => x.UserEnrollNumber.Equals(request.UserId)).FirstOrDefaultAsync();
+                // var userI = await _context.UserInfos
 
                 if (userInfos != null)
                 {
@@ -342,168 +343,412 @@ namespace Dpoint.BackEnd.Checkin.Services.Services
         public async Task<AppActionResultData<string>> PostUserOutOfOfficeAsync(OutOfOfficeRequest request)
         {
             var result = new AppActionResultData<string>();
+            string processExecutionID = "";
+
+            // if (!request.From.TryParseDateTime(out DateTime From, DateTimeHelper.DEFAULT_DATETIME_FORMAT))
+            // {
+            //     return result.BuildError($"Can not convert {nameof(request.From)}");
+            // }
+            // if (!request.To.TryParseDateTime(out DateTime To, DateTimeHelper.DEFAULT_DATETIME_FORMAT))
+            // {
+            //     return result.BuildError($"Can not convert {nameof(request.To)}");
+            // }
             var strFrom = request.Date + " " + request.From;
             var strTo = request.Date + " " + request.To;
-            string process_execution_id = "";
-            if (!strFrom.TryParseDateTime(out DateTime FromDate, DateTimeHelper.DEFAULT_DATETIME_WITHOUT_SECOND_FORMAT))
+
+            // string process_execution_id = "";
+            if (!strFrom.TryParseDateTime(out DateTime From, DateTimeHelper.DEFAULT_DATETIME_WITHOUT_SECOND_FORMAT))
             {
                 return result.BuildError($"Can not convert {nameof(request.Date)}");
             }
-            if (!strTo.TryParseDateTime(out DateTime ToDate, DateTimeHelper.DEFAULT_DATETIME_WITHOUT_SECOND_FORMAT))
+            if (!strTo.TryParseDateTime(out DateTime To, DateTimeHelper.DEFAULT_DATETIME_WITHOUT_SECOND_FORMAT))
             {
                 return result.BuildError($"Can not convert {nameof(request.Date)}");
             }
-            var userInfos = await _context.UserInfos.FirstOrDefaultAsync(x => x.UserEnrollNumber.Equals(request.UserId));
-            // if (userInfos == null) return result.BuildError(MessageResponseConstant.ERROR_DATA_USER_NOT_FOUND);
+
+
 
             var newOutOfOffice = new OutOfOfficeDto
             {
-                From = FromDate,
-                To = ToDate,
-                Note = request.Note,
-                Reason = request.Reason,
+                From = From,
+                To = To,
                 TotalHour = request.TotalHour,
-                UserId = userInfos.UserEnrollNumber,
+                Reason = request.Reason,
+                Note = request.Note ?? "",
             };
 
-            // return BuildMultilingualResult(result, MessageResponseConstant.SUCCESSFULLY, MessageResponseConstant.SUCCESSFULLY);
+            try
+            {
+                var userInfos = await _context.UserInfos.Where(x => x.UserEnrollNumber.Equals(request.UserId)).FirstOrDefaultAsync();
+                // var userI = await _context.UserInfos
 
-            try{
-                var userInfor = await _context.UserInfos.Where(x => x.UserEnrollNumber.Equals(request.UserId)).FirstOrDefaultAsync();
-                if(userInfor != null){
-                    newOutOfOffice.UserId = userInfos.UserIDD;
-                }else{
+                if (userInfos != null)
+                {
+                    newOutOfOffice.Id = userInfos.UserIDD;
+                    // newOutOfOffice.UserEmail = userInfos.UserCalledName;
+                }
+                else
+                {
                     throw new Exception(MessageResponseConstant.ERROR_DATA_USER_NOT_FOUND);
                 }
 
                 var amisDepartment = await _context.AmisDepartments.Where(x => x.InternalDeptId == request.DeptId).FirstOrDefaultAsync();
-                if(amisDepartment != null){
+                if (amisDepartment != null)
+                {
                     newOutOfOffice.AmisDeptCode = amisDepartment.AmisDeptCode;
-                }else{
-                    throw new Exception(MessageResponseConstant.ERROR_DATA_DEPARTMENT_NOT_FOUND);
+                }
+                else
+                {
+                    throw new Exception(MessageResponseConstant.ERROR_INVALID_DEPARTMENT_DATA);
                 }
 
                 var amisEmployee = await _context.AmisEmployees.FirstOrDefaultAsync(x => !x.IsDeleted && x.UserEmail == request.Email);
-                if(amisEmployee != null){
-                    if(amisEmployee.IsAmisUser){
-                        newOutOfOffice.AmisEmail =  amisEmployee.AmisEmail;
+                if (amisEmployee != null)
+                {
+                    if (amisEmployee.IsAmisUser)
+                    {
+                        newOutOfOffice.AmisEmail = amisEmployee.AmisEmail;
                         newOutOfOffice.AmisEmployeeCode = amisEmployee.AmisEmployeeCode;
-                    }else{
+                    }
+                    else
+                    {
                         newOutOfOffice.AmisEmail = amisDepartment.AmisDeptEmail;
                         newOutOfOffice.AmisEmployeeCode = amisDepartment.AmisDeptEmployeeCode;
                     }
                     newOutOfOffice.UserEmployeeCode = amisEmployee.AmisEmployeeCode;
-                }else{
+                }
+                else
+                {
                     throw new Exception(MessageResponseConstant.ERROR_INVALID_AMIS_USER_DATA);
                 }
-            }catch(Exception ex){
+            }
+            catch (Exception ex)
+            {
                 return BuildMultilingualError(result, MessageResponseConstant.ERROR_LEAVE_REGISTRATION_FAILED, ex);
             }
 
-            var dataPosted = new{
-                ProcessID = CF_Constant.CF_PROCESS_ID,
-                CreatorEmpCode = newOutOfOffice.AmisEmployeeCode,
-                CreatorEmail = newOutOfOffice.AmisEmail,
-                Data = new ArrayList(){
-                    new{
-                        // Input
-                        InputCode = AmisProcessConstant.LQ_DEPARTMENT_CODE,
-                        InputValue = new ArrayList(){
-                            new {
-                                OrganizationUnitCode = newOutOfOffice.AmisDeptCode
-                            }
-                        }
-                    },
-                    new{
-                        InputCode = CF_Constant.CF_FROM,
-                        InputValue = new ArrayList(){
-                            new{
-                                Value = newOutOfOffice.From
-                            }
-                        }
-                    },
-                    new{
-                        InputCode = CF_Constant.CF_TO,
-                        InputValue = new ArrayList(){
-                            new{
-                                Value = newOutOfOffice.To
-                            }
-                        } 
-                    },
-                    new{
-                        InputCode = CF_Constant.CF_NOTE,
-                        InputValue = new ArrayList(){
-                            new{
-                                Value = newOutOfOffice.TotalHour
-                            }
-                        }
-                    },
-                    new{
-                        InputCode = CF_Constant.CF_REASON,
-                        InputValue = new ArrayList(){
-                            new{
-                                Value = newOutOfOffice.Reason
-                            }
-                        }
-                    },
-                    new{
-                        InputCode = CF_Constant.CF_TOTAL_HOUR,
-                        InputValue = new ArrayList(){
-                            new{
-                                Value = newOutOfOffice.TotalHour
-                            }
-                        }
-                    },
-                    new{
-                        InputCode = AmisProcessConstant.LQ_EMPLOYEE_NAME_CODE,
-                        InputValue = new ArrayList(){
-                            new{
-                                EmployeeCode = newOutOfOffice.UserEmployeeCode,
-                                mail = newOutOfOffice.UserEmail
-                            }
-                        }
-                    }
-                }
-            };
+            return BuildMultilingualResult(result, processExecutionID, MessageResponseConstant.SUCCESSFULLY_REGISTERED_LEAVE);
 
-            string ContentType = _appSettingsAccessor.AmisProcessSettings.ContentType;
-            string XClientid = _appSettingsAccessor.AmisProcessSettings.XClientid;
-            string TenantID = _appSettingsAccessor.AmisProcessSettings.TenantID;
+            // var dataPost = new
+            // {
+            //     ProcessID = AmisProcessConstant.LQ_PROCESS_ID,
+            //     CreatorEmployeeCode = newOutOfOffice.AmisEmployeeCode,
+            //     CreatorEmail = newOutOfOffice.AmisEmail,
+            //     Data = new ArrayList() {
+            //                     new {
+            //                           InputCode = AmisProcessConstant.LQ_DEPARTMENT_CODE,
+            //                           InputValue = new ArrayList(){ new { OrganizationUnitCode = newOutOfOffice.AmisDeptCode} }
+            //                     },
+            //                     new {
+            //                           InputCode = AmisProcessConstant.LQ_LEAVE_FROM_CODE,
+            //                           InputValue = new ArrayList(){ new { Value = newOutOfOffice.From} }
+            //                     },
+            //                     new {
+            //                           InputCode = AmisProcessConstant.LQ_LEAVE_TO_CODE,
+            //                           InputValue = new ArrayList() { new { Value = newOutOfOffice.To } }
+            //                     },
+            //                     new {
+            //                           InputCode = AmisProcessConstant.LQ_REPLACEMENT_PERSONEL_CODE,
+            //                           InputValue = new ArrayList() { new { EmployeeCode = "", Email = ""} }
+            //                     },
+            //                                                    new {
+            //                           InputCode = AmisProcessConstant.LQ_TOTAL_LEAVE_HOUR_CODE,
+            //                           InputValue = new ArrayList() { new { Value = newOutOfOffice.TotalHour } }
+            //                     },
+            //                     new {
+            //                           InputCode = AmisProcessConstant.LQ_NOTE_CODE,
+            //                           InputValue = new ArrayList() { new { Value = newOutOfOffice.Note } }
+            //                     },
+            //                     new {
+            //                           InputCode = AmisProcessConstant.LQ_LEAVE_REASON_CODE,
+            //                           InputValue = new ArrayList() { new { Value = newOutOfOffice.Reason } }
+            //                     },
+            //                      new {
+            //                           InputCode = AmisProcessConstant.LQ_EMPLOYEE_NAME_CODE,
+            //                           InputValue = new ArrayList() { new { EmployeeCode = newOutOfOffice.UserEmployeeCode, Email = newOutOfOffice.UserEmail} }
+            //                     }
+            //                 }
+            // };
 
-            var contentPost  = JsonSerializer.Serialize(dataPosted);
+            // // Set up HttpClient request to Post data to AMIS Process API            
+            // string ContentType = _appSettingsAccessor.AmisProcessSettings.ContentType;
+            // string XClientid = _appSettingsAccessor.AmisProcessSettings.XClientid;
+            // string TenantID = _appSettingsAccessor.AmisProcessSettings.TenantID;
 
-            HttpClient client = new HttpClient();
+            // var contentPost = JsonSerializer.Serialize(dataPost);
 
-            var AmisProcessAPIUrl = _appSettingsAccessor.AmisProcessSettings.AmisProcessUrl + _appSettingsAccessor.AmisProcessSettings.AmisProcessEndPoint;
-            var httpRequestMessage = new HttpRequestMessage(){
-                RequestUri = new Uri(AmisProcessAPIUrl),
-                Method = HttpMethod.Post,
-                Headers = {
-                    {"x-clientID",XClientid},
-                    {"TenantId",TenantID}
-                },
-                Content = new StringContent(contentPost, Encoding.UTF8)
-            };
-            httpRequestMessage.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-            httpRequestMessage.Content.Headers.ContentType = new MediaTypeHeaderValue(ContentType);
+            // HttpClient client = new HttpClient();
 
-            try{
-                var rep = await client.SendAsync(httpRequestMessage);
-                if(rep.IsSuccessStatusCode){
-                    var newOutOfOfficeResponse = rep.Content.ReadAsAsync<Out_off_office_response>().Result;
-                    if(newOutOfOfficeResponse != null){
-                        if(newOutOfOfficeResponse.Success){
-                            var dataProcessExecution = newOutOfOfficeResponse.Data?.FirstOrDefault()?.Data?.ProcessExe?.process_execution_id;
-                            if(dataProcessExecution!=null){
-                                process_execution_id = dataProcessExecution;
-                            }
-                        }
-                    }
-                }
-            }catch{
+            // var AmisProcessAPIUrl = _appSettingsAccessor.AmisProcessSettings.AmisProcessUrl + _appSettingsAccessor.AmisProcessSettings.AmisProcessEndPoint;
+            // var httpRequestMessage = new HttpRequestMessage()
+            // {
+            //     RequestUri = new Uri(AmisProcessAPIUrl),
+            //     Method = HttpMethod.Post,
+            //     Headers = {
+            //                     { "x-clientid", XClientid },
+            //                     { "TenantID", TenantID }
+            //                 },
+            //     Content = new StringContent(contentPost, Encoding.UTF8)
+            // };
+            // httpRequestMessage.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            // httpRequestMessage.Content.Headers.ContentType = new MediaTypeHeaderValue(ContentType);
 
-            }
-            return BuildMultilingualResult(result,MessageResponseConstant.SUCCESSFULLY_REGISTERED_LEAVE , MessageResponseConstant.SUCCESSFULLY_REGISTERED_LEAVE);
+            // // Get data response
+            // try
+            // {
+            //     var response = await client.SendAsync(httpRequestMessage);
+            //     if (response.IsSuccessStatusCode)
+            //     {
+            //         var dtoLeaveOfAbsenceResponse = response.Content.ReadAsAsync<LeaveOfAbsenceResponse>().Result;
+            //         if (dtoLeaveOfAbsenceResponse != null)
+            //         {
+            //             if (dtoLeaveOfAbsenceResponse.Success)
+            //             {
+            //                 var dataProcessExecution = dtoLeaveOfAbsenceResponse.Data?.FirstOrDefault()?.Data?.ProcessExecution?.ProcessExecutionID;
+            //                 if (dataProcessExecution != null)
+            //                 {
+            //                     processExecutionID = dataProcessExecution;
+
+            //                     var leaveofAbsenceDetails = new List<LeaveOfAbsenceDetail>();
+
+            //                     // foreach (var item in request.LeaveOfAbsenceDetails)
+            //                     // {
+            //                     //     if (!item.LeaveDate.TryParseDateTime(out DateTime leaveDate, DateTimeHelper.DEFAULT_DATETIME_FORMAT))
+            //                     //     {
+            //                     //         return result.BuildError($"Can not convert {nameof(item.LeaveDate)}");
+            //                     //     }
+
+            //                     //     leaveofAbsenceDetails.Add(new LeaveOfAbsenceDetail
+            //                     //     {
+            //                     //         UserId = item.UserId,
+            //                     //         LeaveHours = item.LeaveHours,
+            //                     //         LeaveDate = leaveDate,
+            //                     //         Status = LeaveOfAbsenceStatus.Approved
+            //                     //     });
+            //                     // }
+
+            //                     var LeaveOut = new OutOfOfficeDto
+            //                     {
+            //                         UserId = request.UserId,
+            //                         From = From,
+            //                         To = To,
+            //                         TotalHour = request.TotalHour,
+            //                         Reason = request.Reason,
+            //                         Note = request.Note,
+            //                         // Status = LeaveOfAbsenceStatus.Approved,
+            //                         // LeaveOfAbsenceDetails = leaveofAbsenceDetails
+
+            //                     };
+
+            //                     // var dbResult = _mapper.Map<LeaveOfAbsenceDto, LeaveOfAbsence>(LeaveOut);
+            //                     // await _context.LeaveOfAbsences.AddAsync(dbResult);
+            //                     await _context.SaveChangesAsync();
+            //                 }
+            //                 else
+            //                 {
+            //                     throw new Exception("No data returned from Amis!");
+            //                 }
+            //             }
+            //             else if (dtoLeaveOfAbsenceResponse.Code == 99)
+            //             {
+            //                 string errorText = "ERROR: ";
+            //                 if (dtoLeaveOfAbsenceResponse.UserMessage != null) errorText += dtoLeaveOfAbsenceResponse.UserMessage;
+            //                 if (dtoLeaveOfAbsenceResponse.SystemMessage != null) errorText += dtoLeaveOfAbsenceResponse.SystemMessage;
+            //                 throw new Exception(errorText);
+            //             }
+            //             else
+            //             {
+            //                 throw new Exception("POST DATA FAILED!");
+            //             }
+            //         }
+            //         else
+            //         {
+            //             throw new Exception("POST DATA FAILED!");
+            //         }
+            //     }
+            //     else
+            //     {
+            //         throw new Exception("POST DATA FAILED!");
+            //     }
+            // }
+            // catch (Exception ex)
+            // {
+            //     return BuildMultilingualError(result, MessageResponseConstant.ERROR_LEAVE_REGISTRATION_FAILED, ex);
+            // }
+
+            // return BuildMultilingualResult(result, processExecutionID, MessageResponseConstant.SUCCESSFULLY_REGISTERED_LEAVE);
+            // var result = new AppActionResultData<string>();
+            // try{
+            //     var strFrom = request.Date + " " + request.From;
+            //     var strTo = request.Date + " " + request.To;
+            //     return BuildMultilingualResult(result,MessageResponseConstant.SUCCESSFULLY_REGISTERED_LEAVE , MessageResponseConstant.SUCCESSFULLY_REGISTERED_LEAVE);
+            // }catch(Exception ex){
+            //     return BuildMultilingualResult(result,MessageResponseConstant.ERROR_LEAVE_REGISTRATION_FAILED,ex.Message);
+            // }
+///////////////////////////////////////////////////////////////////////////
+            // string process_execution_id = "";
+            // if (!strFrom.TryParseDateTime(out DateTime FromDate, DateTimeHelper.DEFAULT_DATETIME_WITHOUT_SECOND_FORMAT))
+            // {
+            //     return result.BuildError($"Can not convert {nameof(request.Date)}");
+            // }
+            // if (!strTo.TryParseDateTime(out DateTime ToDate, DateTimeHelper.DEFAULT_DATETIME_WITHOUT_SECOND_FORMAT))
+            // {
+            //     return result.BuildError($"Can not convert {nameof(request.Date)}");
+            // }
+            // var userInfos = await _context.UserInfos.FirstOrDefaultAsync(x => x.UserEnrollNumber.Equals(request.UserId));
+            // // if (userInfos == null) return result.BuildError(MessageResponseConstant.ERROR_DATA_USER_NOT_FOUND);
+
+            // var newOutOfOffice = new OutOfOfficeDto
+            // {
+            //     From = FromDate,
+            //     To = ToDate,
+            //     Note = request.Note,
+            //     Reason = request.Reason,
+            //     TotalHour = request.TotalHour,
+            //     UserId = userInfos.UserEnrollNumber,
+            // };
+
+            // // return BuildMultilingualResult(result, MessageResponseConstant.SUCCESSFULLY, MessageResponseConstant.SUCCESSFULLY);
+
+            // try{
+            //     var userInfor = await _context.UserInfos.Where(x => x.UserEnrollNumber.Equals(request.UserId)).FirstOrDefaultAsync();
+            //     if(userInfor != null){
+            //         newOutOfOffice.UserId = userInfos.UserIDD;
+            //     }else{
+            //         throw new Exception(MessageResponseConstant.ERROR_DATA_USER_NOT_FOUND);
+            //     }
+
+            //     var amisDepartment = await _context.AmisDepartments.Where(x => x.InternalDeptId == request.DeptId).FirstOrDefaultAsync();
+            //     if(amisDepartment != null){
+            //         newOutOfOffice.AmisDeptCode = amisDepartment.AmisDeptCode;
+            //     }else{
+            //         throw new Exception(MessageResponseConstant.ERROR_DATA_DEPARTMENT_NOT_FOUND);
+            //     }
+
+            //     var amisEmployee = await _context.AmisEmployees.FirstOrDefaultAsync(x => !x.IsDeleted && x.UserEmail == request.Email);
+            //     if(amisEmployee != null){
+            //         if(amisEmployee.IsAmisUser){
+            //             newOutOfOffice.AmisEmail =  amisEmployee.AmisEmail;
+            //             newOutOfOffice.AmisEmployeeCode = amisEmployee.AmisEmployeeCode;
+            //         }else{
+            //             newOutOfOffice.AmisEmail = amisDepartment.AmisDeptEmail;
+            //             newOutOfOffice.AmisEmployeeCode = amisDepartment.AmisDeptEmployeeCode;
+            //         }
+            //         newOutOfOffice.UserEmployeeCode = amisEmployee.AmisEmployeeCode;
+            //     }else{
+            //         throw new Exception(MessageResponseConstant.ERROR_INVALID_AMIS_USER_DATA);
+            //     }
+            // }catch(Exception ex){
+            //     return BuildMultilingualError(result, MessageResponseConstant.ERROR_LEAVE_REGISTRATION_FAILED, ex);
+            // }
+
+            // var dataPosted = new{
+            //     ProcessID = CF_Constant.CF_PROCESS_ID,
+            //     CreatorEmpCode = newOutOfOffice.AmisEmployeeCode,
+            //     CreatorEmail = newOutOfOffice.AmisEmail,
+            //     Data = new ArrayList(){
+            //         new{
+            //             // Input
+            //             InputCode = AmisProcessConstant.LQ_DEPARTMENT_CODE,
+            //             InputValue = new ArrayList(){
+            //                 new {
+            //                     OrganizationUnitCode = newOutOfOffice.AmisDeptCode
+            //                 }
+            //             }
+            //         },
+            //         new{
+            //             InputCode = CF_Constant.CF_FROM,
+            //             InputValue = new ArrayList(){
+            //                 new{
+            //                     Value = newOutOfOffice.From
+            //                 }
+            //             }
+            //         },
+            //         new{
+            //             InputCode = CF_Constant.CF_TO,
+            //             InputValue = new ArrayList(){
+            //                 new{
+            //                     Value = newOutOfOffice.To
+            //                 }
+            //             } 
+            //         },
+            //         new{
+            //             InputCode = CF_Constant.CF_NOTE,
+            //             InputValue = new ArrayList(){
+            //                 new{
+            //                     Value = newOutOfOffice.TotalHour
+            //                 }
+            //             }
+            //         },
+            //         new{
+            //             InputCode = CF_Constant.CF_REASON,
+            //             InputValue = new ArrayList(){
+            //                 new{
+            //                     Value = newOutOfOffice.Reason
+            //                 }
+            //             }
+            //         },
+            //         new{
+            //             InputCode = CF_Constant.CF_TOTAL_HOUR,
+            //             InputValue = new ArrayList(){
+            //                 new{
+            //                     Value = newOutOfOffice.TotalHour
+            //                 }
+            //             }
+            //         },
+            //         new{
+            //             InputCode = AmisProcessConstant.LQ_EMPLOYEE_NAME_CODE,
+            //             InputValue = new ArrayList(){
+            //                 new{
+            //                     EmployeeCode = newOutOfOffice.UserEmployeeCode,
+            //                     mail = newOutOfOffice.UserEmail
+            //                 }
+            //             }
+            //         }
+            //     }
+            // };
+
+            // string ContentType = _appSettingsAccessor.AmisProcessSettings.ContentType;
+            // string XClientid = _appSettingsAccessor.AmisProcessSettings.XClientid;
+            // string TenantID = _appSettingsAccessor.AmisProcessSettings.TenantID;
+
+            // var contentPost  = JsonSerializer.Serialize(dataPosted);
+
+            // HttpClient client = new HttpClient();
+
+            // var AmisProcessAPIUrl = _appSettingsAccessor.AmisProcessSettings.AmisProcessUrl + _appSettingsAccessor.AmisProcessSettings.AmisProcessEndPoint;
+            // var httpRequestMessage = new HttpRequestMessage(){
+            //     RequestUri = new Uri(AmisProcessAPIUrl),
+            //     Method = HttpMethod.Post,
+            //     Headers = {
+            //         {"x-clientID",XClientid},
+            //         {"TenantId",TenantID}
+            //     },
+            //     Content = new StringContent(contentPost, Encoding.UTF8)
+            // };
+            // httpRequestMessage.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            // httpRequestMessage.Content.Headers.ContentType = new MediaTypeHeaderValue(ContentType);
+
+            // try{
+            //     var rep = await client.SendAsync(httpRequestMessage);
+            //     if(rep.IsSuccessStatusCode){
+            //         var newOutOfOfficeResponse = rep.Content.ReadAsAsync<Out_off_office_response>().Result;
+            //         if(newOutOfOfficeResponse != null){
+            //             if(newOutOfOfficeResponse.Success){
+            //                 var dataProcessExecution = newOutOfOfficeResponse.Data?.FirstOrDefault()?.Data?.ProcessExe?.process_execution_id;
+            //                 if(dataProcessExecution!=null){
+            //                     process_execution_id = dataProcessExecution;
+            //                     // var outOfficeDetails = new List<LeaveOfAbsence>();
+            //                     // foreach(var item in request.outOfficeDetails){
+
+            //                     // }
+            //                 }
+            //             }
+            //         }
+            //     }
+            // }catch{
+
+            // }
 
 
         }

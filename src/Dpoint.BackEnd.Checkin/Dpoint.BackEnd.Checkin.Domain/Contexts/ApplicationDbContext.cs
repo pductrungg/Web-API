@@ -19,6 +19,7 @@ namespace Dpoint.BackEnd.Checkin.Domain.Contexts
         public DbSet<LeaveOfAbsence> LeaveOfAbsences { get; set; }
         public DbSet<LeaveOfAbsenceDetail> LeaveOfAbsenceDetails { get; set; }
         public DbSet<OutOfOffice> OutOfOffices { get; set; }
+        // public DbSet<OutOfOfficeDetail> outOfOfficeDetails {get;set;}
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
