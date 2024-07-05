@@ -117,6 +117,8 @@ namespace Dpoint.BackEnd.Checkin.Services.Services
             result.BuildResult(resultMessage);
             return result;
         }
+
+
     }
 
 }

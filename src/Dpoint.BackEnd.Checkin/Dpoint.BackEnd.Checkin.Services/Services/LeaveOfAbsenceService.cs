@@ -342,8 +342,10 @@ namespace Dpoint.BackEnd.Checkin.Services.Services
         }
         public async Task<AppActionResultData<string>> PostUserOutOfOfficeAsync(OutOfOfficeRequest request)
         {
+
             var result = new AppActionResultData<string>();
             string processExecutionID = "";
+            return BuildMultilingualResult(result, processExecutionID, MessageResponseConstant.SUCCESSFULLY_REGISTERED_LEAVE);
 
             // if (!request.From.TryParseDateTime(out DateTime From, DateTimeHelper.DEFAULT_DATETIME_FORMAT))
             // {
@@ -427,7 +429,6 @@ namespace Dpoint.BackEnd.Checkin.Services.Services
                 return BuildMultilingualError(result, MessageResponseConstant.ERROR_LEAVE_REGISTRATION_FAILED, ex);
             }
 
-            return BuildMultilingualResult(result, processExecutionID, MessageResponseConstant.SUCCESSFULLY_REGISTERED_LEAVE);
 
             // var dataPost = new
             // {
